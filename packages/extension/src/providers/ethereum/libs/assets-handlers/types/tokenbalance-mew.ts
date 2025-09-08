@@ -76,4 +76,5 @@ export type SupportedNetworkNames =
   | NetworkNames.Base
   | NetworkNames.ImmutableZkevm
   | NetworkNames.Conflux
-  | NetworkNames.CoreDAO;
+  | NetworkNames.CoreDAO
+  | NetworkNames.Aptos;

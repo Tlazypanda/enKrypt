@@ -20,6 +20,7 @@ import { NATIVE_TOKEN_ADDRESS } from '../common';
 import getBlockscoutBalances from './blockscout';
 import getTomoBalances from './tomochain';
 import getSolBalances from './solanachain';
+import getAptBalances from './aptoschain';
 import { CoinGeckoTokenMarket } from '@/libs/market-data/types';
 
 const API_ENPOINT = 'https://tokenbalance.mewapi.io/';
@@ -194,6 +195,10 @@ const supportedNetworks: Record<SupportedNetworkNames, SupportedNetwork> = {
     tbName: '',
     cgPlatform: CoingeckoPlatform.Solana,
   },
+  [NetworkNames.Aptos]: {
+    tbName: '',
+    cgPlatform: CoingeckoPlatform.Aptos,
+  },
   [NetworkNames.Gravity]: {
     tbName: 'gravity',
     cgPlatform: CoingeckoPlatform.Gravity,
@@ -237,6 +242,8 @@ const getTokens = (
     return getTomoBalances(chain, address);
   } else if (chain === NetworkNames.Solana) {
     return getSolBalances(network, address);
+  } else if (chain === NetworkNames.Aptos) {
+    return getAptBalances(network, address);
   } else if (supportedNetworks[chain].bsEndpoint) {
     return getBlockscoutBalances(chain, address);
   }
@@ -336,6 +343,7 @@ export default (
           balances[address].balance,
           tokenInfo[address].decimals,
         );
+        console.log(userBalance);
         const currentPrice = market.current_price ?? 0;
         const usdBalance = new BigNumber(userBalance).times(currentPrice);
         const asset: AssetsType = {

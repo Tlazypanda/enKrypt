@@ -95,6 +95,7 @@ import openOnboard from '@/libs/utils/open-onboard';
 import BTCAccountState from '@/providers/bitcoin/libs/accounts-state';
 import EVMAccountState from '@/providers/ethereum/libs/accounts-state';
 import SolAccountState from '@/providers/solana/libs/accounts-state';
+import AptAccountState from '@/providers/aptos/libs/accounts-state';
 import { MessageMethod } from '@/providers/ethereum/types';
 import { EvmNetwork } from '@/providers/ethereum/types/evm-network';
 import { MessageMethod as KadenaMessageMethod } from '@/providers/kadena/types';
@@ -430,6 +431,7 @@ const onSelectedAddressChanged = async (newAccount: EnkryptAccount) => {
     [ProviderName.ethereum]: EVMAccountState,
     [ProviderName.bitcoin]: BTCAccountState,
     [ProviderName.solana]: SolAccountState,
+    [ProviderName.aptos]: AptAccountState,
   };
   if (Object.keys(accountStates).includes(currentNetwork.value.provider)) {
     const AccountState = new accountStates[

@@ -68,6 +68,7 @@ import {
   SwapRawInfo,
   KadenaRawInfo,
   SOLRawInfo,
+  APTRawInfo,
 } from '@/types/activity';
 import NetworkActivityLoading from './components/network-activity-loading.vue';
 import { ProviderName } from '@/types/provider';
@@ -217,6 +218,17 @@ const handleActivityUpdate = (activity: Activity, info: any, timer: any) => {
     } else {
       return; /* Give the transaction more time to be mined */
     }
+  }
+  else if (props.network.provider === ProviderName.aptos) {
+    if (!info) return;
+    const aptInfo = info as APTRawInfo;
+    if (isActivityUpdating) return;
+    activity.status =
+      aptInfo.result.status == 'success'
+        ? ActivityStatus.success
+        : ActivityStatus.failed;
+    activity.rawInfo = aptInfo as APTRawInfo;
+    updateActivitySync(activity).then(() => updateVisibleActivity(activity));
   }
 
   // If we're this far in then the transaction has reached a terminal status
