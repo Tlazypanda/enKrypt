@@ -105,6 +105,29 @@ class PublicKeyRing {
         isHardware: false,
         isTestWallet: true,
       };
+      allKeys['0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'] = {
+      address: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+      basePath: "m/44'/637'/0'/0", // 637 is Aptos coin type
+      name: 'fake aptos acc 1',
+      pathIndex: 0,
+      publicKey: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+      signerType: SignerType.ed25519, // or SignerType.ed25519apt if you create a specific one
+      walletType: WalletType.mnemonic,
+      isHardware: false,
+      isTestWallet: true,
+    };
+
+      allKeys['0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890'] = {
+      address: '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
+      basePath: "m/44'/637'/0'/1",
+      name: 'fake aptos acc 2', 
+      pathIndex: 1,
+      publicKey: '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
+      signerType: SignerType.ed25519, // or SignerType.ed25519apt
+      walletType: WalletType.mnemonic,
+      isHardware: false,
+      isTestWallet: true,
+    };
     }
     return allKeys;
   }

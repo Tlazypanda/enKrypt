@@ -12,6 +12,7 @@ import SendTransactionEVM from '@/providers/ethereum/ui/send-transaction/index.v
 import SendTransactionBTC from '@/providers/bitcoin/ui/send-transaction/index.vue';
 import SendTransactionKadena from '@/providers/kadena/ui/send-transaction/index.vue';
 import SendTransactionSolana from '@/providers/solana/ui/send-transaction/index.vue';
+import SendTransactionAptos from '@/providers/aptos/ui/send-transaction/index.vue';
 import { useRoute } from 'vue-router';
 import { ProviderName } from '@/types/provider';
 import { getNetworkByName } from '@/libs/utils/networks';
@@ -25,6 +26,7 @@ const sendLayouts: Record<ProviderName, any> = {
   [ProviderName.bitcoin]: SendTransactionBTC,
   [ProviderName.kadena]: SendTransactionKadena,
   [ProviderName.solana]: SendTransactionSolana,
+  [ProviderName.aptos]: SendTransactionAptos,
   [ProviderName.enkrypt]: null,
 };
 

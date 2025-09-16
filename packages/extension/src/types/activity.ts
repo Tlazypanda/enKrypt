@@ -23,6 +23,13 @@ interface SOLRawInfo {
   status: boolean;
 }
 
+interface APTRawInfo {
+  blockNumber: number;
+  transactionHash: string;
+  timestamp: number | null | undefined;
+  status: boolean;
+}
+
 interface BTCRawInfo {
   blockNumber: number;
   transactionHash: string;
@@ -143,4 +150,5 @@ export {
   KadenaRawInfo,
   KadenaDBInfo,
   SOLRawInfo,
+  APTRawInfo
 };

@@ -3,6 +3,7 @@ import type { InjectedProvider as PolkadotProvider } from '@/providers/polkadot/
 import type { InjectedProvider as BitcoinProvider } from '@/providers/bitcoin/types';
 import type { InjectedProvider as KadenaProvider } from '@/providers/kadena/types';
 import type { InjectedProvider as SolanaProvider } from '@/providers/solana/types';
+import type { InjectedProvider as AptosProvider } from '@/providers/aptos/types';
 import EventEmitter from 'eventemitter3';
 import {
   MiddlewareFunction,
@@ -23,6 +24,7 @@ import {
   SubscanExtrinsicInfo,
   KadenaRawInfo,
   SOLRawInfo,
+  APTRawInfo
 } from './activity';
 
 export enum ProviderName {
@@ -32,6 +34,7 @@ export enum ProviderName {
   polkadot = 'polkadot',
   kadena = 'kadena',
   solana = 'solana',
+  aptos = 'aptos'
 }
 export enum InternalStorageNamespace {
   keyring = 'KeyRing',
@@ -42,6 +45,7 @@ export enum InternalStorageNamespace {
   bitcoinAccountsState = 'BitcoinAccountsState',
   kadenaAccountsState = 'KadenaAccountsState',
   solanaAccountsState = 'SolanaAccountsState',
+  aptosAccountsState = 'AptosAccountsState',
   activityState = 'ActivityState',
   marketData = 'MarketData',
   cacheFetch = 'CacheFetch',
@@ -68,6 +72,7 @@ export enum ProviderType {
   bitcoin,
   kadena,
   solana,
+  aptos
 }
 
 export type SendMessageHandler = (
@@ -144,6 +149,7 @@ export abstract class ProviderAPIInterface {
     | BTCRawInfo
     | KadenaRawInfo
     | SOLRawInfo
+    | APTRawInfo
     | null
   >;
 }
@@ -163,13 +169,15 @@ export {
   BitcoinProvider,
   KadenaProvider,
   SolanaProvider,
+  AptosProvider
 };
 export type Provider =
   | EthereumProvider
   | PolkadotProvider
   | BitcoinProvider
   | KadenaProvider
-  | SolanaProvider;
+  | SolanaProvider
+  | AptosProvider;
 
 export interface ProviderRequestOptions {
   url: string;
