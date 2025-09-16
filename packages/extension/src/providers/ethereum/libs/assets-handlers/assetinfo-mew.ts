@@ -20,7 +20,7 @@ import { NATIVE_TOKEN_ADDRESS } from '../common';
 import getBlockscoutBalances from './blockscout';
 import getTomoBalances from './tomochain';
 import getSolBalances from './solanachain';
-import getAptBalances from './aptoschain';
+import getBalances from './aptoschain';
 import { CoinGeckoTokenMarket } from '@/libs/market-data/types';
 
 const API_ENPOINT = 'https://tokenbalance.mewapi.io/';
@@ -243,7 +243,8 @@ const getTokens = (
   } else if (chain === NetworkNames.Solana) {
     return getSolBalances(network, address);
   } else if (chain === NetworkNames.Aptos) {
-    return getAptBalances(network, address);
+    console.log(getBalances(network, address));
+    return getBalances(network, address);
   } else if (supportedNetworks[chain].bsEndpoint) {
     return getBlockscoutBalances(chain, address);
   }
@@ -282,10 +283,12 @@ export default (
     throw new Error('TOKENBALANCE-MEW: network not supported');
   const networkName = network.name as SupportedNetworkNames;
   return getTokens(network, address).then(async tokens => {
+    console.log(tokens);
     const balances: Record<string, TokenBalance> = tokens.reduce(
       (obj, cur) => ({ ...obj, [cur.contract]: cur }),
       {},
     );
+    console.log(balances);
     const marketData = new MarketData();
 
     const marketInfo = supportedNetworks[networkName].cgPlatform
@@ -299,11 +302,14 @@ export default (
           (obj, cur) => ({ ...obj, [cur.contract]: null }),
           {} as Record<string, CoinGeckoTokenMarket | null>,
         );
+
+        console.log(marketInfo);
     if (network.coingeckoID) {
       const nativeMarket = await marketData.getMarketData([
         network.coingeckoID,
       ]);
       marketInfo[NATIVE_TOKEN_ADDRESS] = nativeMarket[0];
+      console.log(nativeMarket[0]);
     } else {
       marketInfo[NATIVE_TOKEN_ADDRESS] = {
         id: '',

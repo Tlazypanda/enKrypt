@@ -110,35 +110,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, PropType, computed } from 'vue';
+import { ref, onMounted, PropType, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import SendHeader from '@/providers/common/ui/send-transaction/send-header.vue';
-import SendAddressInput from '@/providers/solana/ui/send-transaction/components/send-address-input.vue';
+import SendAddressInput from '@/providers/aptos/ui/send-transaction/components/send-address-input.vue';
 import SendFromContactsList from '@/providers/common/ui/send-transaction/send-from-contacts-list.vue';
 import SendContactsList from '@/providers/common/ui/send-transaction/send-contacts-list.vue';
 import AssetsSelectList from '@action/views/assets-select-list/index.vue';
 import NftSelectList from '@/providers/common/ui/send-transaction/nft-select-list/index.vue';
-import SendTokenSelect from '@/providers/solana/ui/send-transaction/components/send-token-select.vue';
-import SendAlert from '@/providers/solana/ui/send-transaction/components/send-alert.vue';
+import SendTokenSelect from '@/providers/aptos/ui/send-transaction/components/send-token-select.vue';
+import SendAlert from '@/providers/aptos/ui/send-transaction/components/send-alert.vue';
 import SendNftSelect from '@/providers/common/ui/send-transaction/send-nft-select.vue';
 import SendInputAmount from '@/providers/common/ui/send-transaction/send-input-amount.vue';
 import SendFeeSelect from '@/providers/common/ui/send-transaction/send-fee-select.vue';
 import BaseButton from '@action/components/base-button/index.vue';
 import { NFTItemWithCollectionName, NFTItem, NFTType } from '@/types/nft';
 import { AccountsHeaderData } from '@action/types/account';
-import { toBN } from 'web3-utils';
+import { numberToHex, toBN } from 'web3-utils';
 import { GasPriceTypes, GasFeeType } from '@/providers/common/types';
-import { AptosNetwork } from '../../types/aptos-network';
+import { AptosNetwork, getAddress } from '../../types/aptos-network';
 import { AptosToken } from '../../types/aptos-token';
 import BigNumber from 'bignumber.js';
 import { defaultGasCostVals } from '@/providers/common/libs/default-vals';
 import { fromBase, toBase, isValidDecimals } from '@enkryptcom/utils';
+import getAccountSequenceNumber from '@/providers/aptos/libs/api';
 import {
   formatFloatingPointValue,
   isNumericPositive,
 } from '@/libs/utils/number-formatter';
 import { trackSendEvents } from '@/libs/metrics';
 import { SendEventType } from '@/libs/metrics/types';
+import aptosAPI from '@/providers/aptos/libs/api';
 
 const props = defineProps({
   network: {
@@ -163,6 +165,7 @@ const loadingAsset = new AptosToken({
 
 const route = useRoute();
 const router = useRouter();
+const aptConnection = ref<AptosAPI>();
 const addressInputTo = ref();
 const selected: string = route.params.id as string;
 const isSendToken = ref<boolean>(true);
@@ -170,6 +173,7 @@ const accountAssets = ref<AptosToken[]>([]);
 const selectedAsset = ref<AptosToken>(loadingAsset);
 const amount = ref<string>('');
 const isLoadingAssets = ref(true);
+const AptTx = ref<AptTransaction>();
 
 const selectedNft = ref<NFTItemWithCollectionName>({
   id: '',
@@ -205,6 +209,23 @@ const hasEnoughBalance = computed((): boolean => {
   return toBN(selectedAsset.value.balance ?? '0').gte(
     toBN(toBase(sendAmount.value ?? '0', selectedAsset.value.decimals!)),
   );
+});
+
+const isInputsValid = computed<boolean>(() => {
+  if (!props.network.isAddress(getAddress(addressTo.value))) return false;
+  if (
+    isSendToken.value &&
+    !isValidDecimals(sendAmount.value, selectedAsset.value.decimals!)
+  ) {
+    return false;
+  }
+  if (!isSendToken.value && !selectedNft.value.id) {
+    return false;
+  }
+  const sendAmountBigNumber = new BigNumber(sendAmount.value);
+  if (sendAmountBigNumber.isNaN()) return false;
+  if (sendAmountBigNumber.gt(assetMaxValue.value)) return false;
+  return true;
 });
 
 const errorMsg = computed(() => {
@@ -249,8 +270,28 @@ const isValidSend = computed<boolean>(() => {
 
 onMounted(async () => {
   trackSendEvents(SendEventType.SendOpen, { network: props.network.name });
-  fetchAssets();
+  aptConnection.value = (await props.network.api()).api as AptosAPI;
+  fetchAssets().then(setBaseCosts)
 });
+
+const TxInfo = computed<SendTransactionDataType>(() => {
+  const value = sendAmount.value
+    ? numberToHex(toBase(sendAmount.value, selectedAsset.value.decimals))
+    : '0x0';
+  const contract = isSendToken.value
+    ? selectedAsset.value.contract
+    : selectedNft.value.contract;
+  return {
+    from: addressFrom.value,
+    value: isSendToken.value ? value : '0x1',
+    to: addressTo.value,
+    contract,
+  };
+});
+
+const setBaseCosts = async () => {
+  updateTransactionFees();
+};
 
 const fetchAssets = () => {
   accountAssets.value = [];
@@ -268,6 +309,20 @@ const isOpenSelectContactTo = ref<boolean>(false);
 const isOpenSelectToken = ref<boolean>(false);
 const isOpenSelectNft = ref(false);
 
+watch(
+  [isInputsValid, addressTo, selectedAsset, selectedNft, isSendToken],
+  () => {
+    if (isInputsValid.value) {
+      updateTransactionFees();
+    }
+  },
+);
+
+watch([isSendToken], () => {
+  inputAmount('0');
+});
+
+
 const close = () => {
   trackSendEvents(SendEventType.SendDecline, {
     network: props.network.name,
@@ -284,7 +339,10 @@ const assetMaxValue = computed(() => {
 
 const setMaxValue = () => {
   isMaxSelected.value = true;
-  amount.value = parseFloat(assetMaxValue.value) < 0 ? '0' : assetMaxValue.value;
+   if (isInputsValid.value) {
+    updateTransactionFees();
+  }
+  
 };
 
 const inputAddressFrom = (text: string) => {
@@ -323,6 +381,8 @@ const selectToken = (token: AptosToken) => {
   isOpenSelectToken.value = false;
 };
 
+
+
 const inputAmount = (inputAmount: string) => {
   if (inputAmount === '') {
     inputAmount = '0';
@@ -330,11 +390,103 @@ const inputAmount = (inputAmount: string) => {
   const inputAmountBn = new BigNumber(inputAmount);
   isMaxSelected.value = false;
   amount.value = inputAmountBn.lt(0) ? '0' : inputAmount;
+  if (isInputsValid.value) {
+    updateTransactionFees();
+  }
+};
+
+const updateTransactionFees = async () => {
+  // Build Aptos transaction based on TxInfo.value
+  const transaction = {
+    sender: TxInfo.value.from,
+    sequence_number: await new getAccountSequenceNumber(TxInfo.value.from),
+    max_gas_amount: "100000",
+    gas_unit_price: "100",
+    expiration_timestamp_secs: Math.floor(Date.now() / 1000) + 600,
+    payload: {
+      type: "entry_function_payload",
+      function: isSendToken.value 
+        ? "0x1::aptos_coin::transfer" 
+        : "0x1::nft::transfer", // Different functions for tokens vs NFTs
+      type_arguments: [],
+      arguments: [
+        TxInfo.value.to,
+        TxInfo.value.value
+      ]
+    }
+  };
+  
+  AptTx.value = transaction;
+  
+  // Simulate transaction to get gas costs
+  const gasEstimate = await simulateAptosTransaction(transaction);
+  // Update gasCostValues.value based on estimate
 };
 
 const sendAction = async () => {
-  // This would integrate with the verification flow
-  console.log('Send action triggered');
+  await recentlySentAddresses.addRecentlySentAddress(
+    props.network,
+    addressTo.value,
+  );
+
+  const keyring = new PublicKeyRing();
+  const fromAccountInfo = await keyring.getAccount(
+    addressFrom.value.toLowerCase(),
+  );
+  
+  const txVerifyInfo: VerifyTransactionParams = {
+    TransactionData: TxInfo.value,
+    isNFT: !isSendToken.value,
+    NFTData: !isSendToken.value ? selectedNft.value : undefined,
+    toToken: {
+      amount: toBase(sendAmount.value, selectedAsset.value.decimals!),
+      decimals: selectedAsset.value.decimals!,
+      icon: selectedAsset.value.icon as string,
+      symbol: selectedAsset.value.symbol || 'unknown',
+      valueUSD: new BigNumber(selectedAsset.value.price || '0')
+        .times(sendAmount.value)
+        .toString(),
+      name: selectedAsset.value.name || '',
+      price: selectedAsset.value.price || '0',
+    },
+    fromAddress: fromAccountInfo.address,
+    fromAddressName: fromAccountInfo.name,
+    gasFee: gasCostValues.value[selectedFee.value],
+    gasPriceType: selectedFee.value,
+    toAddress: addressTo.value,
+    encodedTx: Buffer.from(
+      JSON.stringify(AptTx.value), // Aptos transactions are typically JSON
+      'utf8'
+    ).toString('base64'), // Encode as base64 instead of bs58
+  };
+  
+  const routedRoute = router.resolve({
+    name: RouterNames.verify.name,
+    query: {
+      id: selected,
+      txData: Buffer.from(JSON.stringify(txVerifyInfo), 'utf8').toString(
+        'base64',
+      ),
+    },
+  });
+  
+  if (fromAccountInfo.isHardware) {
+    await Browser.windows.create({
+      url: Browser.runtime.getURL(
+        getUiPath(
+          `apt-hw-verify?id=${routedRoute.query.id}&txData=${routedRoute.query.txData}`,
+          ProviderName.aptos, // Use Aptos provider instead of Solana
+        ),
+      ),
+      type: 'popup',
+      focused: true,
+      height: 600,
+      width: 460,
+    });
+    window.close();
+  } else {
+    router.push(routedRoute);
+  }
 };
 
 const toggleSelector = (isTokenSend: boolean) => {

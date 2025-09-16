@@ -4,9 +4,6 @@ import { NATIVE_TOKEN_ADDRESS } from '../common';
 import { numberToHex } from '@enkryptcom/utils';
 import { BaseNetwork } from '@/types/base-network';
 
-interface AptosBalanceResponse {
-  balance: string;
-}
 
 const APTOS_COIN_TYPE = '0x1::aptos_coin::AptosCoin';
 
@@ -30,8 +27,8 @@ const getBalanceForAsset = async (network: BaseNetwork, address: string, assetTy
       throw new Error(`Failed to fetch balance for ${assetType}: ${response.statusText}`);
     }
 
-    const data: AptosBalanceResponse = await response.json();
-    return data.balance || '0';
+    const data = await response.json();
+    return data || '0';
   } catch (error) {
     console.error(`Error fetching balance for ${assetType}:`, error);
     return '0';
